@@ -28,6 +28,7 @@ const User = require("./models/User");
 const Auth = require("./models/Auth");
 
 const { response } = require("express");
+const Class = require("./models/Class");
 
 main().catch((err) => console.log(err));
 
@@ -48,6 +49,58 @@ async function main() {
 // if something goes wrong we send another response to frontend
 // frontend should be able to check if it succeeded or not
 
+//SKELETON FOR ROUTE
+// app.post("/class/create", async (req, res) => {
+//   try {
+//     return res.json({ success: true });
+//   } catch(e) {
+//     return res.json({ success: false, message: e.message });
+//   }
+// });
+
+app.get("/classes", async (req, res) => {
+  try {
+    let classes = await Class.find({});
+    return res.json({ success: true, classes });
+  } catch (e) {
+    return res.json({ success: false, message: e.message });
+  }
+});
+
+// OUR CLASS CREATION ROUTE
+app.post("/class/create", async (req, res) => {
+  try {
+    let newClass = req.body;
+
+    if (
+      !newClass.type ||
+      !newClass.date ||
+      !newClass.time ||
+      !newClass.teacher ||
+      !newClass.capacity ||
+      !newClass.duration
+    ) {
+      throw new Error("missing class details");
+    }
+    // store in db
+    let databaseResponse = await Class.create({
+      type: newClass.type,
+      date: newClass.date,
+      time: newClass.time,
+      teacher: newClass.teacher,
+      capacity: newClass.capacity,
+      duration: newClass.duration,
+      registeredUsers: [],
+    });
+
+    console.log("CLASS HAS BEEN ADDED", databaseResponse);
+
+    return res.json({ success: true });
+  } catch (e) {
+    return res.json({ success: false, message: e.message });
+  }
+});
+
 // OUR REGISTRATION ROUTE
 app.post("/user/create", async (req, res) => {
   try {
@@ -63,6 +116,10 @@ app.post("/user/create", async (req, res) => {
     ) {
       throw new Error("missing user details");
     }
+
+    // email already exist
+    let user = await User.findOne({ email: newUser.email });
+    if (user) throw new Error("email address already in use");
 
     // check all the lengths and additional requirements
     // hash password with bcrypt
@@ -93,15 +150,14 @@ app.post("/user/create", async (req, res) => {
 // LOGIN ROUTE
 app.post("/user/login", async (req, res) => {
   try {
-    console.log(req.body);
     // validate input
     let userInput = req.body; // req.body is object we get from frontend
 
     // we need to ensure that we have email address and a password
-
     // lookup a user by email
     // we get object back from database if it exists
     let userInDatabase = await User.findOne({ email: userInput.email });
+    if (!userInDatabase) throw new Error("user does not exist");
 
     let comp = await bcrypt.compare(
       userInput.password,
