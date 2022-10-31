@@ -59,8 +59,19 @@ async function main() {
 // });
 
 app.get("/classes", async (req, res) => {
+  let start = req.query.start; // timestamp
+  let days = req.query.days; // days
+
+  let startDate = moment.unix(start).toDate(); // convert timestamp back to a javascript date
+  let endDate = moment.unix(start).add(days, "days").toDate(); // add 7 days to this date
+
   try {
-    let classes = await Class.find({});
+    let classes = await Class.find({
+      date: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    });
     return res.json({ success: true, classes });
   } catch (e) {
     return res.json({ success: false, message: e.message });
@@ -198,6 +209,7 @@ app.post("/user/login", async (req, res) => {
       success: true,
       auth: { token: auth.token, expiry: auth.expiry },
       firstName: userInDatabase.firstName,
+      isAdmin: userInDatabase.isAdmin,
     });
   } catch (e) {
     return res.json({ success: false, message: e.message });
