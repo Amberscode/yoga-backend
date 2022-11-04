@@ -29,6 +29,7 @@ const Auth = require("./models/Auth");
 
 const { response } = require("express");
 const Class = require("./models/Class");
+const { find } = require("./models/User");
 
 main().catch((err) => console.log(err));
 
@@ -57,6 +58,77 @@ async function main() {
 //     return res.json({ success: false, message: e.message });
 //   }
 // });
+
+// return all classes for a specific user
+app.post("/user/classes", async (req, res) => {
+  try {
+    let userToken = req.body.token;
+    // validate user token
+    // see which user belongs to this token
+    let auth = await Auth.findOne({ token: userToken });
+
+    let userId = auth.userId;
+    if (!userId) throw new Error("token is invalid");
+
+    let userInDatabase = await User.findOne({ _id: userId });
+    if (!userInDatabase) throw new Error("user does not exist");
+
+    let ids = userInDatabase.registeredClasses;
+    let userClasses = await Class.find().where("_id").in(ids).exec();
+
+    return res.json({ success: true, classes: userClasses });
+  } catch (e) {
+    return res.json({ success: false, message: e.message });
+  }
+});
+
+// register user for class
+// store user on class
+// store class on user -> adjust model first
+// decrease the number of students left
+// when no spots left do not allow registration
+
+// userToken -> find userId
+// classId -> find class
+
+app.post("/class/register", async (req, res) => {
+  try {
+    let data = req.body;
+    let classId = data.classId;
+    let userToken = req.body.token;
+
+    // validate user token
+    // see which user belongs to this token
+    let auth = await Auth.findOne({ token: userToken });
+
+    let userId = auth.userId;
+    if (!userId) throw new Error("token is invalid");
+
+    let userInDatabase = await User.findOne({ _id: userId });
+    if (!userInDatabase) throw new Error("user does not exist");
+    // get yoga class
+    let yogaClass = await Class.findOne({ _id: classId });
+    // establish rules
+    if (yogaClass.capacity < 1) throw new Error("class full");
+    if (yogaClass.registeredUsers.indexOf(userId) != -1)
+      throw new Error("user is already registered");
+
+    // apply changes
+    yogaClass.registeredUsers.push(userId);
+    yogaClass.capacity = yogaClass.capacity - 1;
+    await yogaClass.save();
+
+    if (!userInDatabase.registeredClasses) {
+      userInDatabase.registeredClasses = [];
+    }
+    userInDatabase.registeredClasses.push(classId);
+    await userInDatabase.save();
+
+    return res.json({ success: true });
+  } catch (e) {
+    return res.json({ success: false, message: e.message });
+  }
+});
 
 app.get("/classes", async (req, res) => {
   let start = req.query.start; // timestamp
