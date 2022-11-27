@@ -174,6 +174,33 @@ app.post("/class/deregister", async (req, res) => {
   }
 });
 
+app.post("/class/delete", async (req, res) => {
+  try {
+    let data = req.body;
+    let classId = data.classId;
+    let userToken = req.body.token;
+    // validate user token
+    // see which user belongs to this token
+    let auth = await Auth.findOne({ token: userToken });
+
+    let userId = auth.userId;
+    if (!userId) throw new Error("token is invalid");
+
+    let yogaClass = await Class.findOne({ _id: classId });
+
+    if (yogaClass.registeredUsers.length > 0) {
+      throw new Error("cannot delete class with users registered");
+    }
+
+    await yogaClass.remove();
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.log(e);
+    return res.json({ success: false, message: e.message });
+  }
+});
+
 app.get("/classes", async (req, res) => {
   let start = req.query.start; // timestamp
   let days = req.query.days; // days
