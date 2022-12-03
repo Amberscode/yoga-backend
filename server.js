@@ -174,6 +174,46 @@ app.post("/class/deregister", async (req, res) => {
   }
 });
 
+app.get("/class/edit/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    // get yoga class
+    let classToEdit = await Class.findById(id);
+
+    return res.json({ success: true, classToEdit });
+  } catch (e) {
+    console.log(e);
+    return res.json({ success: false, message: e.message });
+  }
+});
+
+app.post("/class/edit", async (req, res) => {
+  try {
+    let data = req.body;
+    let classId = data.classId;
+    let userToken = req.body.token;
+    // validate user token
+    // see which user belongs to this token
+    let auth = await Auth.findOne({ token: userToken });
+
+    let userId = auth.userId;
+    if (!userId) throw new Error("token is invalid");
+
+    let userInDatabase = await User.findOne({ _id: userId });
+    if (!userInDatabase) throw new Error("user does not exist");
+    // get yoga class
+    let yogaClass = await Class.findOne({ _id: classId });
+    // establish rules
+
+    await yogaClass.save();
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.log(e);
+    return res.json({ success: false, message: e.message });
+  }
+});
+
 app.post("/class/delete", async (req, res) => {
   try {
     let data = req.body;
