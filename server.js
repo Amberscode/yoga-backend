@@ -189,23 +189,34 @@ app.get("/class/edit/:id", async (req, res) => {
 
 app.post("/class/edit", async (req, res) => {
   try {
-    let data = req.body;
-    let classId = data.classId;
-    let userToken = req.body.token;
-    // validate user token
-    // see which user belongs to this token
-    let auth = await Auth.findOne({ token: userToken });
+    let updatedClass = req.body;
+    let id = updatedClass.id;
 
-    let userId = auth.userId;
-    if (!userId) throw new Error("token is invalid");
+    if (
+      !updatedClass.type ||
+      !updatedClass.date ||
+      !updatedClass.time ||
+      !updatedClass.teacher ||
+      !updatedClass.capacity ||
+      !updatedClass.duration
+    ) {
+      throw new Error("missing class details");
+    }
+    // store in db
+    let databaseResponse = await Class.findByIdAndUpdate(id, {
+      $set: {
+        type: updatedClass.type,
+        date: updatedClass.date,
+        time: updatedClass.time,
+        teacher: updatedClass.teacher,
+        capacity: updatedClass.capacity,
+        duration: updatedClass.duration,
+      },
+    });
 
-    let userInDatabase = await User.findOne({ _id: userId });
-    if (!userInDatabase) throw new Error("user does not exist");
-    // get yoga class
-    let yogaClass = await Class.findOne({ _id: classId });
-    // establish rules
+    await Class.save();
 
-    await yogaClass.save();
+    console.log("CLASS HAS BEEN UPDATED", databaseResponse);
 
     return res.json({ success: true });
   } catch (e) {
