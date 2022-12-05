@@ -112,6 +112,8 @@ app.post("/class/register", async (req, res) => {
     if (yogaClass.capacity < 1) throw new Error("class full");
     if (yogaClass.registeredUsers.indexOf(userId) != -1)
       throw new Error("user is already registered");
+    if (yogaClass.isCanceled === true)
+      throw new Error("cannot register for a canceled class");
 
     // apply changes
     yogaClass.registeredUsers.push(userId);
@@ -214,9 +216,30 @@ app.post("/class/edit", async (req, res) => {
       },
     });
 
-    await Class.save();
-
     console.log("CLASS HAS BEEN UPDATED", databaseResponse);
+
+    return res.json({ success: true });
+  } catch (e) {
+    console.log(e);
+    return res.json({ success: false, message: e.message });
+  }
+});
+
+app.post("/class/cancel", async (req, res) => {
+  try {
+    let updatedClass = req.body;
+    let id = updatedClass.id;
+
+    console.log(updatedClass, "updated class");
+
+    // store in db
+    let databaseResponse = await Class.findByIdAndUpdate(id, {
+      $set: {
+        isCanceled: updatedClass.isCanceled,
+      },
+    });
+
+    console.log("CLASS HAS BEEN CANCELED", databaseResponse);
 
     return res.json({ success: true });
   } catch (e) {

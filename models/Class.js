@@ -8,6 +8,10 @@ const classSchema = new mongoose.Schema({
   capacity: Number,
   duration: Number,
   registeredUsers: Array,
+  isCanceled: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model("Class", classSchema);
